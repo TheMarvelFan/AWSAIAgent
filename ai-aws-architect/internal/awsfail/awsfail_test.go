@@ -93,6 +93,8 @@ type narrowed struct{ diag, output string }
 func (e *narrowed) Error() string            { return e.diag + "\n" + e.output }
 func (e *narrowed) ClassifiableText() string { return e.diag }
 
+// Cosmetic change to trigger deploy
+
 // The bug this guards: Terraform prints resource attributes, and a Lambda with
 // `timeout = 15` in its plan output was classified as a network timeout - which
 // marked a determinate failure as indeterminate and sent the deployment to
