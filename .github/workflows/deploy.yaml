@@ -75,6 +75,11 @@ jobs:
           while [ $(( ${#P} % 4 )) -ne 0 ]; do P="${P}="; done
           echo "$P" | tr '_-' '/+' | base64 -d | jq '{sub,aud,repository,ref}'
 
+      - name: Check the account id secret
+        run: |
+          V='${{ secrets.AWS_ACCOUNT_ID }}'
+          echo "length: ${#V}"
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/aiarch-github-actions
