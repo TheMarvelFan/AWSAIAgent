@@ -64,6 +64,9 @@ jobs:
     needs: changes
     if: ${{ vars.DEPLOY_FROZEN != 'true' && (needs.changes.outputs.backend == 'true' || inputs.deploy_backend) }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -138,6 +141,9 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' || inputs.deploy_frontend }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
