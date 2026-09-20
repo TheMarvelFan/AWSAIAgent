@@ -55,7 +55,7 @@ function Workspace() {
   const deployment = useDeployment(deploymentId);
 
   // Opening a chat should surface whatever deployment it already has, otherwise
-  // a plan started in another session is invisible until someone plans again.
+  // a plan started in another session is invisible, until someone plans again.
   useEffect(() => {
     if (!activeId) {
       setDeploymentId(null);
