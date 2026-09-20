@@ -105,7 +105,7 @@ function buildUrl(path: string, query: RequestOptions['query'], base: string): s
   // Never send a trailing slash: Gin 301-redirects them, which a client that does
   // not follow redirects sees as an unexpected status (§1.5).
   const clean = path.replace(/\/+$/, '');
-  const url = new URL(base + clean);
+  const url = new URL(base + clean, window.location.origin);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
   }
