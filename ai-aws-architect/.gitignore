@@ -1,0 +1,34 @@
+# binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# env / secrets
+.env
+.env.local
+*.pem
+
+# go
+/vendor/
+*.test
+*.out
+coverage.*
+
+# terraform (later phases)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Other
+*.txt

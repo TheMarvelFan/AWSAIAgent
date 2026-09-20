@@ -1,0 +1,33 @@
+{
+  "id": "cost-budget",
+  "name": "Spending alert (AWS Budget)",
+  "category": "governance",
+  "summary": "A monthly cost budget in your own AWS account that emails you at 80% of actual spend, at forecast overrun, and at 100%. Costs nothing and watches everything.",
+  "provides": ["budget", "cost alert", "spending alert", "billing alert", "cost control", "spend limit"],
+  "resources": ["aws_budgets_budget"],
+  "parameters": [
+    {
+      "name": "budget_name",
+      "type": "string",
+      "required": true,
+      "pattern": "^[a-z][a-z0-9-]{2,30}$"
+    },
+    {
+      "name": "monthly_limit_usd",
+      "type": "int",
+      "required": true,
+      "min": 1,
+      "max": 100000,
+      "description": "Monthly spend threshold in USD."
+    },
+    {
+      "name": "notify_email",
+      "type": "string",
+      "required": true,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "description": "Where alerts go. Ask the user for this; it cannot be guessed."
+    }
+  ],
+  "estimated_cost_usd_per_month": { "low": 0.0, "high": 0.0 },
+  "notes": "Alerts, does not block. Account-wide rather than filtered to resources this system created, because tag-filtered budgets need cost allocation tags activated manually and take up to 24 hours to apply."
+}

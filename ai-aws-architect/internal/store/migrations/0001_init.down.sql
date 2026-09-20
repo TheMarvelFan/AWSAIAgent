@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS chat_config_versions;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS chats;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;

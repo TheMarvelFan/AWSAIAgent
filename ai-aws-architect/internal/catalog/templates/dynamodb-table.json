@@ -1,0 +1,42 @@
+{
+  "id": "dynamodb-table",
+  "name": "NoSQL table (DynamoDB, on-demand)",
+  "category": "database",
+  "summary": "A single DynamoDB table billed per request, with encryption at rest and an optional sort key and TTL. Nothing to size, nothing running when idle.",
+  "provides": ["database", "nosql", "dynamodb", "table", "key value", "store", "persistence", "state"],
+  "resources": ["aws_dynamodb_table"],
+  "parameters": [
+    {
+      "name": "table_name",
+      "type": "string",
+      "required": true,
+      "pattern": "^[a-z][a-z0-9-]{2,30}$"
+    },
+    {
+      "name": "partition_key",
+      "type": "string",
+      "required": false,
+      "default": "pk",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,60}$",
+      "description": "Attribute name for the partition key. String type."
+    },
+    {
+      "name": "sort_key",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "pattern": "^([a-zA-Z][a-zA-Z0-9_]{0,60})?$",
+      "description": "Optional sort key. Empty for a partition-key-only table."
+    },
+    {
+      "name": "ttl_attribute",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "pattern": "^([a-zA-Z][a-zA-Z0-9_]{0,60})?$",
+      "description": "Attribute holding a Unix timestamp after which items are deleted automatically. Empty disables TTL."
+    }
+  ],
+  "estimated_cost_usd_per_month": { "low": 0.0, "high": 2.0 },
+  "notes": "On-demand billing only - provisioned capacity bills whether or not anything reads the table. Point-in-time recovery is off, so this is not for data worth recovering."
+}
