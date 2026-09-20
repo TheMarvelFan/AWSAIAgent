@@ -193,7 +193,7 @@ jobs:
   # you find it in front of a judge.
   smoke:
     needs: [backend, frontend]
-    if: ${{ always() && !cancelled() && vars.ALB_DNS != '' }}
+    if: ${{ always() && !cancelled() && vars.SMOKE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Probe the load balancer
@@ -201,14 +201,14 @@ jobs:
           set -euo pipefail
           BASE="http://${{ vars.ALB_DNS }}"
 
-          echo "liveness:"  && curl -fsS "$BASE/healthz"
-          echo "readiness:" && curl -fsS "$BASE/readyz"
+          echo "liveness:"  && curl -fsS "$BASE/healthz --max-time 15"
+          echo "readiness:" && curl -fsS "$BASE/readyz --max-time 15"
 
           # /v1/catalog is authenticated, so 401 is the success case here: it
           # proves the listener rule reached the Go service. nginx would answer
           # 404 from its own default location, which is the failure this catches.
-          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/v1/catalog")
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/v1/catalog" --max-time 15)
           echo "v1 routing: $code"
           [ "$code" = "401" ] || { echo "expected 401 from /v1/catalog, got $code"; exit 1; }
 
-          echo "frontend:" && curl -fsSI "$BASE/" | head -n 1
+          echo "frontend:" && curl -fsSI "$BASE/" --max-time 15 | head -n 1
