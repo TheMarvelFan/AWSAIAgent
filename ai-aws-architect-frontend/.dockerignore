@@ -1,0 +1,12 @@
+# .env.production is NOT ignored — it is what tells the build to use relative
+# API paths. Ignoring it with a blanket `.env*` silently rebuilds the bundle
+# pointing at http://localhost:8080 and the deployed page dies on every call.
+.env
+.env.local
+.env.development
+
+node_modules
+dist
+.git
+.gitignore
+*.md

@@ -1,0 +1,14 @@
+# Never let a local .env reach the image — it would shadow the task definition
+# and quietly put AWS_PROFILE back.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.gitattributes
+bin/
+docker-compose.yml
+scripts/
+Makefile
+*.md

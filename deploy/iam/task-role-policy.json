@@ -1,0 +1,43 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeCustomerRoles",
+      "Effect": "Allow",
+      "Action": ["sts:AssumeRole", "sts:GetCallerIdentity"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "TerraformStateObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::${TF_STATE_BUCKET}/*"
+    },
+    {
+      "Sid": "TerraformStateBucket",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+      "Resource": "arn:aws:s3:::${TF_STATE_BUCKET}"
+    },
+    {
+      "Sid": "EcsExecForDebugging",
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BedrockForWhenTheSupportCaseClears",
+      "Effect": "Allow",
+      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:${ACCOUNT_ID}:inference-profile/*"
+      ]
+    }
+  ]
+}

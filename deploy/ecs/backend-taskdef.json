@@ -1,0 +1,93 @@
+{
+  "family": "aiarch-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "ephemeralStorage": {
+    "sizeInGiB": 50
+  },
+  "executionRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/aiarch-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/aiarch-task-role",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aiarch-backend:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 8080, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "HTTP_ADDR", "value": ":8080" },
+        { "name": "GIN_MODE", "value": "release" },
+        { "name": "LOG_LEVEL", "value": "info" },
+        { "name": "LOG_FORMAT", "value": "json" },
+
+        { "name": "CORS_ALLOWED_ORIGINS", "value": "http://${ALB_DNS}" },
+
+        { "name": "RUN_MIGRATIONS", "value": "true" },
+        { "name": "DB_MAX_CONNS", "value": "10" },
+        { "name": "DB_MIN_CONNS", "value": "1" },
+
+        { "name": "JWT_ISSUER", "value": "ai-aws-architect" },
+        { "name": "ACCESS_TOKEN_TTL", "value": "15m" },
+        { "name": "REFRESH_TOKEN_TTL", "value": "720h" },
+
+        { "name": "LLM_PROVIDER", "value": "stub" },
+        { "name": "AWS_REGION", "value": "${AWS_REGION}" },
+        { "name": "AGENT_MAX_HISTORY_MESSAGES", "value": "20" },
+        { "name": "AGENT_TIMEOUT", "value": "90s" },
+
+        { "name": "RUNNER_PROVIDER", "value": "terraform" },
+        { "name": "TERRAFORM_BINARY", "value": "/usr/local/bin/terraform" },
+        { "name": "TF_WORK_ROOT", "value": "/var/tmp/ai-aws-architect" },
+        { "name": "TF_PLUGIN_CACHE_DIR", "value": "/var/tmp/tf-plugin-cache" },
+        { "name": "TF_STATE_BUCKET", "value": "${TF_STATE_BUCKET}" },
+        { "name": "TF_STATE_REGION", "value": "${AWS_REGION}" },
+        { "name": "TF_WORKSPACE_TTL", "value": "2h" },
+
+        { "name": "AWS_SERVICE_ACCOUNT_ID", "value": "${ACCOUNT_ID}" },
+        { "name": "AWS_SERVICE_ROLE_NAME", "value": "ai-aws-architect-provisioner" },
+        { "name": "AWS_CONNECT_TEMPLATE_URL", "value": "${CONNECT_TEMPLATE_URL}" },
+        { "name": "AWS_CONNECT_STACK_REGION", "value": "us-east-1" },
+        { "name": "AWS_DEFAULT_PROVISION_REGION", "value": "${AWS_REGION}" },
+        { "name": "AWS_CONNECTION_CHECK_TTL", "value": "60s" },
+
+        { "name": "DEPLOY_TEARDOWN_AFTER", "value": "45m" },
+        { "name": "DEPLOY_MAX_RUN_TIME", "value": "20m" },
+        { "name": "WORKER_ENABLED", "value": "true" },
+        { "name": "WORKER_POLL_INTERVAL", "value": "2s" },
+        { "name": "JOB_STALE_AFTER", "value": "25m" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/aiarch/DATABASE_URL"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/aiarch/JWT_SECRET"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aiarch-backend",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

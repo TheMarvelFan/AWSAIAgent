@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadTaskSecrets",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameters"],
+      "Resource": "arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/aiarch/*"
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+name: Deploy
+
+# A backend deploy replaces the running task, and TF_WORK_ROOT lives on that
+# task's ephemeral storage. Any saved plan awaiting approval dies with it, and
+# the runner will correctly refuse to apply afterwards rather than re-planning.
+#
+# So: set the repository variable DEPLOY_FROZEN=true before you start recording
+# or presenting. The backend job checks it. Unset it afterwards.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: "Deploy the backend even if nothing under ai-aws-architect/ changed"
+        type: boolean
+        default: false
+      deploy_frontend:
+        description: "Deploy the frontend even if nothing under ai-aws-architect-frontend/ changed"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write   # required for OIDC; there are no AWS keys in this repo
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  CLUSTER: aiarch-cluster
+  BACKEND_SERVICE: aiarch-backend
+  FRONTEND_SERVICE: aiarch-frontend
+  BACKEND_REPO: aiarch-backend
+  FRONTEND_REPO: aiarch-frontend
+
+jobs:
+  # ---------------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'ai-aws-architect/**'
+              - 'deploy/ecs/backend-taskdef.json'
+              - '.github/workflows/deploy.yml'
+            frontend:
+              - 'ai-aws-architect-frontend/**'
+              - 'deploy/ecs/frontend-taskdef.json'
+              - '.github/workflows/deploy.yml'
+
+  # ---------------------------------------------------------------------------
+  backend:
+    needs: changes
+    if: ${{ vars.DEPLOY_FROZEN != 'true' && (needs.changes.outputs.backend == 'true' || inputs.deploy_backend) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/aiarch-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./ai-aws-architect
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The task definition in the repo carries placeholders so the public repo
+      # holds no account id, bucket name or hostname.
+      - name: Expand task definition placeholders
+        env:
+          ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          ALB_DNS: ${{ vars.ALB_DNS }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          CONNECT_TEMPLATE_URL: ${{ vars.CONNECT_TEMPLATE_URL }}
+        run: envsubst < deploy/ecs/backend-taskdef.json > /tmp/backend-taskdef.json
+
+      - id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/backend-taskdef.json
+          container-name: backend
+          image: ${{ steps.ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ github.sha }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ env.BACKEND_SERVICE }}
+          cluster: ${{ env.CLUSTER }}
+          wait-for-service-stability: true
+
+      # The customer's browser fetches this before they have granted anything,
+      # so it has to stay publicly readable and in step with the repo.
+      - name: Publish connect-role.yaml
+        run: |
+          aws s3 cp ai-aws-architect/deploy/cloudformation/connect-role.yaml \
+            "s3://${{ vars.PUBLIC_BUCKET }}/connect-role.yaml" \
+            --content-type text/yaml
+
+  # ---------------------------------------------------------------------------
+  frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || inputs.deploy_frontend }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/aiarch-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./ai-aws-architect-frontend
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Expand task definition placeholders
+        env:
+          ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: envsubst < deploy/ecs/frontend-taskdef.json > /tmp/frontend-taskdef.json
+
+      - id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/frontend-taskdef.json
+          container-name: frontend
+          image: ${{ steps.ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ github.sha }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ env.FRONTEND_SERVICE }}
+          cluster: ${{ env.CLUSTER }}
+          wait-for-service-stability: true
+
+  # ---------------------------------------------------------------------------
+  # Proves the whole path end to end: ALB routing, both target groups, and the
+  # database behind /readyz. Cheap, and it catches a broken listener rule before
+  # you find it in front of a judge.
+  smoke:
+    needs: [backend, frontend]
+    if: ${{ always() && !cancelled() && vars.ALB_DNS != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe the load balancer
+        run: |
+          set -euo pipefail
+          BASE="http://${{ vars.ALB_DNS }}"
+
+          echo "liveness:"  && curl -fsS "$BASE/healthz"
+          echo "readiness:" && curl -fsS "$BASE/readyz"
+
+          # /v1/catalog is authenticated, so 401 is the success case here: it
+          # proves the listener rule reached the Go service. nginx would answer
+          # 404 from its own default location, which is the failure this catches.
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/v1/catalog")
+          echo "v1 routing: $code"
+          [ "$code" = "401" ] || { echo "expected 401 from /v1/catalog, got $code"; exit 1; }
+
+          echo "frontend:" && curl -fsSI "$BASE/" | head -n 1
