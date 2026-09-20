@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+/*
+ * Dark is the default. Light is opt-in via data-theme="light" on <html>.
+ *
+ * Three colours are reserved and appear nowhere else in the interface:
+ *   destroy  — magenta-red, solid border
+ *   replace  — gold, dashed border
+ *   resolve  — violet, left rule
+ *
+ * Their appearance always means the same thing: this cannot be undone. Add and
+ * change carry no signal colour at all, so anything coloured is consequential.
+ *
+ * The hues are chosen to separate on the blue-yellow axis and by lightness, not
+ * by red-green hue difference. Colour is never the only carrier — the border
+ * treatment and the word itself both survive if the palette fails entirely.
+ */
+
+@custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
+
+:root {
+  --surface-0: #0e1116;
+  --surface-1: #151a21;
+  --surface-2: #1c222b;
+  --surface-3: #232a35;
+
+  --edge: #2a313c;
+  --edge-strong: #3a434f;
+
+  --ink: #e3e8ee;
+  --ink-muted: #98a2af;
+  --ink-faint: #6b7684;
+
+  --destroy: #ff4d7d;
+  --destroy-bg: #2b0b18;
+  --destroy-ink: #ff8fb0;
+
+  --replace: #f5c542;
+  --replace-bg: #2a2103;
+  --replace-ink: #f7d57a;
+
+  --resolve: #a78bfa;
+  --resolve-bg: #1b1230;
+  --resolve-ink: #c9b6fd;
+
+  /* Padlock states. Broken shares the destroy hue but desaturated — saturation
+     and lightness stay readable where hue does not, and the padlock is never
+     adjacent to a plan summary. */
+  --lock-idle: #6b7684;
+  --lock-ok: #2fa48c;
+  --lock-broken: #c4566e;
+  --lock-broken-bg: #24131a;
+
+  --accent: #6aa6f0;
+  --accent-bg: #10243c;
+
+  /* Diff states. Deliberately NOT the destroy/replace palette: a config change
+     is reversible (§7), and the reserved colours mean irreversible. Teal and
+     blue separate on the blue-yellow axis; removed carries no hue at all and
+     relies on a strikethrough instead. */
+  --diff-added: #2fa48c;
+  --diff-added-bg: #0f2a26;
+  --diff-modified: #6aa6f0;
+  --diff-modified-bg: #10243c;
+}
+
+[data-theme='light'] {
+  --surface-0: #f2f4f6;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+
+  --edge: #dce1e7;
+  --edge-strong: #c3cad3;
+
+  --ink: #1a1f26;
+  --ink-muted: #5b6470;
+  --ink-faint: #838c98;
+
+  --destroy: #b0003a;
+  --destroy-bg: #fce4ec;
+  --destroy-ink: #80002a;
+
+  --replace: #8a6100;
+  --replace-bg: #fbf0cc;
+  --replace-ink: #5e4200;
+
+  --resolve: #5b3fbf;
+  --resolve-bg: #ede7fb;
+  --resolve-ink: #3d2a85;
+
+  --lock-idle: #838c98;
+  --lock-ok: #0f7a66;
+  --lock-broken: #a8324c;
+  --lock-broken-bg: #fbe9ed;
+
+  --accent: #1c63b8;
+  --accent-bg: #e4eefb;
+
+  --diff-added: #0f7a66;
+  --diff-added-bg: #dcf2ec;
+  --diff-modified: #1c63b8;
+  --diff-modified-bg: #e4eefb;
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-destroy: var(--destroy);
+  --color-destroy-bg: var(--destroy-bg);
+  --color-destroy-ink: var(--destroy-ink);
+
+  --color-replace: var(--replace);
+  --color-replace-bg: var(--replace-bg);
+  --color-replace-ink: var(--replace-ink);
+
+  --color-resolve: var(--resolve);
+  --color-resolve-bg: var(--resolve-bg);
+  --color-resolve-ink: var(--resolve-ink);
+
+  --color-lock-idle: var(--lock-idle);
+  --color-lock-ok: var(--lock-ok);
+  --color-lock-broken: var(--lock-broken);
+  --color-lock-broken-bg: var(--lock-broken-bg);
+
+  --color-accent: var(--accent);
+  --color-accent-bg: var(--accent-bg);
+
+  --color-diff-added: var(--diff-added);
+  --color-diff-added-bg: var(--diff-added-bg);
+  --color-diff-modified: var(--diff-modified);
+  --color-diff-modified-bg: var(--diff-modified-bg);
+
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Plan output is long and horizontally wide. It scrolls inside its own box so
+   the page body never moves sideways. */
+.plan-output {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+}
